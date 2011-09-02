@@ -1,0 +1,14 @@
+Index: exec/main.c
+===================================================================
+--- exec/main.c	(revision 2950)
++++ exec/main.c	(revision 2951)
+@@ -418,6 +418,9 @@
+ 	fd = open("/dev/null", O_RDWR);
+ 	if (fd >= 0) {
+ 		/* dup2 to 0 / 1 / 2 (stdin / stdout / stderr) */
++		close (STDIN_FILENO);
++		close (STDOUT_FILENO);
++		close (STDERR_FILENO);
+ 		dup2(fd, STDIN_FILENO);  /* 0 */
+ 		dup2(fd, STDOUT_FILENO); /* 1 */
+ 		dup2(fd, STDERR_FILENO); /* 2 */

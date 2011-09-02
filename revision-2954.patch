@@ -1,0 +1,12 @@
+Index: exec/main.c
+===================================================================
+--- exec/main.c	(revision 2953)
++++ exec/main.c	(revision 2954)
+@@ -163,6 +163,7 @@
+ 	 * here
+ 	 */
+ 	serialize_unlock ();
++	api->timer_delete (corosync_stats_timer_handle);
+ 	poll_stop (corosync_poll_handle);
+ 	totempg_finalize ();
+ 

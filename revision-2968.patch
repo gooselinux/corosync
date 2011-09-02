@@ -1,0 +1,34 @@
+Index: exec/coroparse.c
+===================================================================
+--- exec/coroparse.c	(revision 2967)
++++ exec/coroparse.c	(revision 2968)
+@@ -278,9 +278,12 @@
+ 	if (dp == NULL)
+ 		return 0;
+ 
+-	len = offsetof(struct dirent, d_name) +
+-                     pathconf(dirname, _PC_NAME_MAX) + 1;
++	len = offsetof(struct dirent, d_name) + NAME_MAX + 1;
++
+ 	entry = malloc(len);
++	if (entry == NULL) {
++		return 0;
++	}
+ 
+ 	for (return_code = readdir_r(dp, entry, &dirent);
+ 		dirent != NULL && return_code == 0;
+@@ -331,9 +334,12 @@
+ 	if (dp == NULL)
+ 		return 0;
+ 
+-	len = offsetof(struct dirent, d_name) +
+-                     pathconf(dirname, _PC_NAME_MAX) + 1;
++	len = offsetof(struct dirent, d_name) + NAME_MAX + 1;
++
+ 	entry = malloc(len);
++	if (entry == NULL) {
++		return 0;
++	}
+ 
+ 	for (return_code = readdir_r(dp, entry, &dirent);
+ 		dirent != NULL && return_code == 0;

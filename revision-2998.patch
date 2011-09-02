@@ -1,0 +1,45 @@
+Index: exec/mainconfig.c
+===================================================================
+--- exec/mainconfig.c	(revision 2997)
++++ exec/mainconfig.c	(revision 2998)
+@@ -528,22 +528,26 @@
+ 				object_logger_subsys_handle,
+ 				"name", &value)) {
+ 
+-				if ((strcmp(value, "corosync") == 0) &&
+-				   (!objdb_get_string (objdb,
+-					object_logger_subsys_handle,
+-					"subsys", &value))) {
+-
+-					if (corosync_main_config_set (objdb,
+-							object_logger_subsys_handle,
+-							value,
+-							&error_reason) < 0) {
+-						goto parse_error;
++				if (strcmp(value, "corosync") == 0) {
++					if (!objdb_get_string (objdb,
++						object_logger_subsys_handle,
++						"subsys", &value)) {
++						if (corosync_main_config_set (objdb,
++								object_logger_subsys_handle,
++								value,
++								&error_reason) < 0) {
++							goto parse_error;
++						}
+ 					}
++					else {
++						if (corosync_main_config_set (objdb,
++								object_logger_subsys_handle,
++								NULL,
++								&error_reason) < 0) {
++							goto parse_error;
++						}
++					}
+ 				}
+-				else {
+-					error_reason = "subsys required for logging_daemon directive";
+-					goto parse_error;
+-				}
+ 			}
+ 			else {
+ 				error_reason = "name required for logging_daemon directive";

@@ -1,0 +1,50 @@
+Index: include/corosync/coroipc_ipc.h
+===================================================================
+--- include/corosync/coroipc_ipc.h	(revision 2974)
++++ include/corosync/coroipc_ipc.h	(revision 2975)
+@@ -84,10 +84,10 @@
+ typedef struct {
+ 	int service __attribute__((aligned(8)));
+ 	unsigned long long semkey __attribute__((aligned(8)));
+-	char control_file[64] __attribute__((aligned(8)));
+-	char request_file[64] __attribute__((aligned(8)));
+-	char response_file[64] __attribute__((aligned(8)));
+-	char dispatch_file[64] __attribute__((aligned(8)));
++	char control_file[PATH_MAX] __attribute__((aligned(8)));
++	char request_file[PATH_MAX] __attribute__((aligned(8)));
++	char response_file[PATH_MAX] __attribute__((aligned(8)));
++	char dispatch_file[PATH_MAX] __attribute__((aligned(8)));
+ 	size_t control_size __attribute__((aligned(8)));
+ 	size_t request_size __attribute__((aligned(8)));
+ 	size_t response_size __attribute__((aligned(8)));
+Index: exec/coroipcs.c
+===================================================================
+--- exec/coroipcs.c	(revision 2974)
++++ exec/coroipcs.c	(revision 2975)
+@@ -38,6 +38,7 @@
+ #define _GNU_SOURCE 1
+ #endif
+ #include <pthread.h>
++#include <limits.h>
+ #include <assert.h>
+ #include <pwd.h>
+ #include <grp.h>
+Index: lib/coroipcc.c
+===================================================================
+--- lib/coroipcc.c	(revision 2974)
++++ lib/coroipcc.c	(revision 2975)
+@@ -648,10 +648,10 @@
+ 	int sys_res;
+ 	mar_req_setup_t req_setup;
+ 	mar_res_setup_t res_setup;
+-	char control_map_path[128];
+-	char request_map_path[128];
+-	char response_map_path[128];
+-	char dispatch_map_path[128];
++	char control_map_path[PATH_MAX];
++	char request_map_path[PATH_MAX];
++	char response_map_path[PATH_MAX];
++	char dispatch_map_path[PATH_MAX];
+ 
+ 	res = hdb_error_to_cs (hdb_handle_create (&ipc_hdb,
+ 		sizeof (struct ipc_instance), handle));

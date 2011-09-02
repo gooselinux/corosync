@@ -1,0 +1,13 @@
+Index: services/cpg.c
+===================================================================
+--- services/cpg.c	(revision 2946)
++++ services/cpg.c	(revision 2947)
+@@ -663,7 +663,7 @@
+ 
+ 	if (cpd->group_name.length > 0) {
+ 		cpg_node_joinleave_send (cpd->pid, &cpd->group_name,
+-				MESSAGE_REQ_EXEC_CPG_PROCLEAVE, CONFCHG_CPG_REASON_LEAVE);
++				MESSAGE_REQ_EXEC_CPG_PROCLEAVE, CONFCHG_CPG_REASON_PROCDOWN);
+ 	}
+ 
+ 	cpg_pd_finalize (cpd);

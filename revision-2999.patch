@@ -1,0 +1,10 @@
+Index: exec/syncv2.c
+===================================================================
+--- exec/syncv2.c	(revision 2998)
++++ exec/syncv2.c	(revision 2999)
+@@ -617,4 +617,5 @@
+ void sync_v2_memb_list_abort (void)
+ {
+ 	my_memb_determine_list_entries = 0;
++	memset (&my_memb_determine_ring_id, 0, sizeof (struct memb_ring_id));
+ }

@@ -1,0 +1,13 @@
+Index: init/generic.in
+===================================================================
+--- init/generic.in	(revision 3039)
++++ init/generic.in	(revision 3040)
+@@ -6,7 +6,7 @@
+ #
+ # License: Revised BSD
+ 
+-# chkconfig: - 20 20
++# chkconfig: - 20 80
+ # description: Corosync Cluster Engine
+ # processname: corosync
+ #

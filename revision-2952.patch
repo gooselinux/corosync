@@ -1,0 +1,27 @@
+Index: exec/main.c
+===================================================================
+--- exec/main.c	(revision 2951)
++++ exec/main.c	(revision 2952)
+@@ -136,6 +136,8 @@
+ 
+ static sem_t corosync_exit_sem;
+ 
++static void serialize_unlock (void);
++
+ hdb_handle_t corosync_poll_handle_get (void)
+ {
+ 	return (corosync_poll_handle);
+@@ -154,6 +156,13 @@
+ 
+ static void unlink_all_completed (void)
+ {
++	/*
++	 * The schedwrk_do API takes the global serializer lock
++	 * but doesn't release it because this exit callback is called
++	 * before it finishes.  Since we know we are exiting, we unlock it
++	 * here
++	 */
++	serialize_unlock ();
+ 	poll_stop (corosync_poll_handle);
+ 	totempg_finalize ();
+ 

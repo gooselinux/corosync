@@ -1,0 +1,35 @@
+Index: exec/totemconfig.c
+===================================================================
+--- exec/totemconfig.c	(revision 3005)
++++ exec/totemconfig.c	(revision 3006)
+@@ -564,13 +564,6 @@
+ 		goto parse_error;
+ 	}
+ 
+-	if (totem_config->consensus_timeout < 1.2 * totem_config->token_timeout) {
+-		snprintf (local_error_reason, sizeof(local_error_reason),
+-			"The consensus timeout parameter (%d ms) must be atleast 1.2 * token (%d ms).",
+-			totem_config->consensus_timeout, (int) ((float)1.2 * totem_config->token_timeout));
+-		goto parse_error;
+-	}
+-
+ 	if (totem_config->merge_timeout == 0) {
+ 		totem_config->merge_timeout = MERGE_TIMEOUT;
+ 	}
+Index: man/corosync.conf.5
+===================================================================
+--- man/corosync.conf.5	(revision 3005)
++++ man/corosync.conf.5	(revision 3006)
+@@ -333,6 +333,12 @@
+ value for consensus must be 1.2 * token.  This value will be automatically
+ calculated at 1.2 * token if the user doesn't specify a consensus value.
+ 
++For two node clusters, a consensus larger then the join timeout but less then
++token is safe.  For three node or larger clusters, consensus should be larger
++then token.  There is an increasing risk of odd membership changes, which stil
++guarantee virtual synchrony,  as node count grows if consensus is less than
++token.
++
+ The default is 1200 milliseconds.
+ 
+ .TP
