@@ -1,0 +1,199 @@
+diff -uNr corosync-1.2.3/exec/totemconfig.c corosync-1.2.3.patched/exec/totemconfig.c
+--- corosync-1.2.3/exec/totemconfig.c	2011-01-11 11:22:35.844509968 -0700
++++ corosync-1.2.3.patched/exec/totemconfig.c	2011-01-11 11:18:42.284666731 -0700
+@@ -79,6 +79,7 @@
+ #define MAX_NETWORK_DELAY			50
+ #define WINDOW_SIZE				50
+ #define MAX_MESSAGES				17
++#define MISS_COUNT_CONST			5
+ #define RRP_PROBLEM_COUNT_TIMEOUT		2000
+ #define RRP_PROBLEM_COUNT_THRESHOLD_DEFAULT	10
+ #define RRP_PROBLEM_COUNT_THRESHOLD_MIN		5
+@@ -219,6 +220,8 @@
+ 	objdb_get_string (objdb, object_totem_handle, "vsftype", &totem_config->vsf_type);
+ 
+ 	objdb_get_int (objdb,object_totem_handle, "max_messages", &totem_config->max_messages);
++
++	objdb_get_int (objdb,object_totem_handle, "miss_count_const", &totem_config->miss_count_const);
+ }
+ 
+ 
+@@ -507,6 +510,10 @@
+ 		totem_config->max_messages = MAX_MESSAGES;
+ 	}
+ 
++	if (totem_config->miss_count_const == 0) {
++		totem_config->miss_count_const = MISS_COUNT_CONST;
++	}
++
+ 	if (totem_config->token_timeout < MINIMUM_TIMEOUT) {
+ 		snprintf (local_error_reason, sizeof(local_error_reason),
+ 			"The token timeout parameter (%d ms) may not be less then (%d ms).",
+diff -uNr corosync-1.2.3/exec/totemsrp.c corosync-1.2.3.patched/exec/totemsrp.c
+--- corosync-1.2.3/exec/totemsrp.c	2011-01-11 11:22:35.853757825 -0700
++++ corosync-1.2.3.patched/exec/totemsrp.c	2011-01-11 11:18:42.286681093 -0700
+@@ -841,6 +841,10 @@
+ 		totem_config->window_size, totem_config->max_messages);
+ 
+ 	log_printf (instance->totemsrp_log_level_debug,
++		"missed count const (%d messages)\n",
++		totem_config->miss_count_const);
++
++	log_printf (instance->totemsrp_log_level_debug,
+ 		"send threads (%d threads)\n", totem_config->threads);
+ 	log_printf (instance->totemsrp_log_level_debug,
+ 		"RRP token expired timeout (%d ms)\n",
+@@ -2435,7 +2439,7 @@
+ 			strcat (retransmit_msg, value);
+ 		}
+ 		strcat (retransmit_msg, "\n");
+-		log_printf (instance->totemsrp_log_level_debug,
++		log_printf (instance->totemsrp_log_level_notice,
+ 			"%s", retransmit_msg);
+ 	}
+ 
+@@ -2501,6 +2505,20 @@
+ 		res = sq_item_inuse (sort_queue, instance->my_aru + i);
+ 		if (res == 0) {
+ 			/*
++			 * Determine how many times we have missed receiving
++			 * this sequence number.  sq_item_miss_count increments
++			 * a counter for the sequence number.  The miss count
++			 * will be returned and compared.  This allows time for
++			 * delayed multicast messages to be received before
++			 * declaring the message is missing and requesting a
++			 * retransmit.
++			 */
++			res = sq_item_miss_count (sort_queue, instance->my_aru + i);
++			if (res < instance->totem_config->miss_count_const) {
++				continue;
++			}
++
++			/*
+ 			 * Determine if missing message is already in retransmit list
+ 			 */
+ 			found = 0;
+diff -uNr corosync-1.2.3/include/corosync/sq.h corosync-1.2.3.patched/include/corosync/sq.h
+--- corosync-1.2.3/include/corosync/sq.h	2010-05-19 06:35:17.000000000 -0700
++++ corosync-1.2.3.patched/include/corosync/sq.h	2011-01-11 11:18:42.287686187 -0700
+@@ -42,6 +42,7 @@
+ 	unsigned int size;
+ 	void *items;
+ 	unsigned int *items_inuse;
++	unsigned int *items_miss_count;
+ 	unsigned int size_per_item;
+ 	unsigned int head_seqid;
+ 	unsigned int item_count;
+@@ -112,7 +113,12 @@
+ 	    == NULL) {
+ 		return (-ENOMEM);
+ 	}
++	if ((sq->items_miss_count = malloc (item_count * sizeof (unsigned int)))
++	    == NULL) {
++		return (-ENOMEM);
++	}
+ 	memset (sq->items_inuse, 0, item_count * sizeof (unsigned int));
++	memset (sq->items_miss_count, 0, item_count * sizeof (unsigned int));
+ 	return (0);
+ }
+ 
+@@ -124,6 +130,7 @@
+ 
+ 	memset (sq->items, 0, sq->item_count * sq->size_per_item);
+ 	memset (sq->items_inuse, 0, sq->item_count * sizeof (unsigned int));
++	memset (sq->items_miss_count, 0, sq->item_count * sizeof (unsigned int));
+ }
+ 
+ static inline void sq_assert (const struct sq *sq, unsigned int pos)
+@@ -149,11 +156,14 @@
+ 		sq_src->item_count * sq_src->size_per_item);
+ 	memcpy (sq_dest->items_inuse, sq_src->items_inuse,
+ 		sq_src->item_count * sizeof (unsigned int));
++	memcpy (sq_dest->items_miss_count, sq_src->items_miss_count,
++		sq_src->item_count * sizeof (unsigned int));
+ }
+ 
+ static inline void sq_free (struct sq *sq) {
+ 	free (sq->items);
+ 	free (sq->items_inuse);
++	free (sq->items_miss_count);
+ }
+ 
+ static inline void *sq_item_add (
+@@ -178,6 +188,7 @@
+ 	} else {
+ 		sq->items_inuse[sq_position] = seqid;
+ 	}
++	sq->items_miss_count[sq_position] = 0;
+ 
+ 	return (sq_item);
+ }
+@@ -204,6 +215,17 @@
+ 	return (sq->items_inuse[sq_position] != 0);
+ }
+ 
++static inline unsigned int sq_item_miss_count (
++	const struct sq *sq,
++	unsigned int seq_id)
++{
++	unsigned int sq_position;
++
++	sq_position = (sq->head - sq->head_seqid + seq_id) % sq->size;
++	sq->items_miss_count[sq_position]++;
++	return (sq->items_miss_count[sq_position]);
++}
++
+ static inline unsigned int sq_size_get (
+ 	const struct sq *sq)
+ {
+@@ -286,6 +308,8 @@
+ //		printf ("releasing %d for %d\n", oldhead, seqid - sq->head_seqid + 1);
+ 		memset (&sq->items_inuse[oldhead], 0,
+ 			(seqid - sq->head_seqid + 1) * sizeof (unsigned int));
++		memset (&sq->items_miss_count[oldhead], 0,
++			(seqid - sq->head_seqid + 1) * sizeof (unsigned int));
+ 	}
+ 	sq->head_seqid = seqid + 1;
+ }
+diff -uNr corosync-1.2.3/include/corosync/totem/totem.h corosync-1.2.3.patched/include/corosync/totem/totem.h
+--- corosync-1.2.3/include/corosync/totem/totem.h	2009-12-07 17:27:08.000000000 -0700
++++ corosync-1.2.3.patched/include/corosync/totem/totem.h	2011-01-11 11:21:04.524369236 -0700
+@@ -165,6 +165,8 @@
+ 	int crypto_sign_type;
+ 
+ 	int transport_number;
++
++	unsigned int miss_count_const;
+ };
+ 
+ #define TOTEM_CONFIGURATION_TYPE
+@@ -248,6 +250,9 @@
+ 
+ } totemsrp_stats_t;
+ 
++ 
++ #define TOTEM_CONFIGURATION_TYPE
++
+ typedef struct {
+ 	totem_stats_header_t hdr;
+ 	totemsrp_stats_t *srp;
+diff -uNr corosync-1.2.3/man/corosync.conf.5 corosync-1.2.3.patched/man/corosync.conf.5
+--- corosync-1.2.3/man/corosync.conf.5	2011-01-11 11:22:35.844509968 -0700
++++ corosync-1.2.3.patched/man/corosync.conf.5	2011-01-11 11:18:42.288748429 -0700
+@@ -422,6 +422,16 @@
+ The default is 17 messages.
+ 
+ .TP
++miss_count_const
++This constant defines the maximum number of times on receipt of a token
++a message is checked for retransmission before a retransmission occurs.  This
++parameter is useful to modify for switches that delay multicast packets
++compared to unicast packets.  The default setting works well for nearly all
++modern switches.
++
++The default is 5 messages.
++
++.TP
+ rrp_problem_count_timeout
+ This specifies the time in milliseconds to wait before decrementing the
+ problem count by 1 for a particular ring to ensure a link is not marked

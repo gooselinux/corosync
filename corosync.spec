@@ -1,7 +1,9 @@
+%define _default_patch_fuzz 2
+
 Name: corosync
 Summary: The Corosync Cluster Engine and Application Programming Interfaces
 Version: 1.2.3
-Release: 21%{?alphatag:.%{alphatag}}%{?dist}
+Release: 21%{?dist}.1
 License: BSD
 Group: System Environment/Base
 URL: http://ftp.corosync.org
@@ -54,6 +56,8 @@ Patch43: revision-3006.patch
 Patch44: revision-3013.patch
 Patch45: revision-3023.patch
 Patch46: revision-3040.patch
+# Future patches are from the git tree
+Patch47: 0001-Handle-delayed-multicast-packets-that-occur-with-swi.patch
 
 ExclusiveArch: i686 x86_64
 
@@ -121,6 +125,7 @@ BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 %patch44
 %patch45
 %patch46
+%patch47 -p1
 
 %build
 ./autogen.sh
@@ -310,6 +315,13 @@ The Corosync Cluster Engine APIs.
 %{_mandir}/man8/sam_overview.8*
 
 %changelog
+* Tue Jan 11 2011 Steven Dake <sdake@edhat.com> 1.2.3-21.1
+- Resolves: rhbz#638592
+- merge upstream commit bab4945b57c150301c034085f3ce7b4187b6c864
+-  Works around problem where some switch hardware delays multicast
+-  packets compared to the unicast token.  This would result in messages
+-  being retransmitted when no retransmission was necessary.
+
 * Tue Sep 7 2010 Steven Dake <sdake@redhat.com> 1.2.3-21
 - Resolves: rhbz#630106
 - merge upstream revision 3040 - change stop level from 20 to 80.
