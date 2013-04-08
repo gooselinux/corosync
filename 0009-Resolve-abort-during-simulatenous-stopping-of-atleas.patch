@@ -1,0 +1,58 @@
+diff -uNr corosync-1.2.3.orig/exec/totemsrp.c corosync-1.2.3/exec/totemsrp.c
+--- corosync-1.2.3.orig/exec/totemsrp.c	2011-04-11 11:50:34.443529931 -0700
++++ corosync-1.2.3/exec/totemsrp.c	2011-04-11 11:54:05.420529922 -0700
+@@ -500,6 +500,9 @@
+ 	struct memb_commit_token *commit_token;
+ 
+ 	totemsrp_stats_t stats;
++
++	uint32_t orf_token_discard;
++
+ 	void * token_recv_event_handle;
+ 	void * token_sent_event_handle;
+ 	char commit_token_storage[9000];
+@@ -662,6 +665,8 @@
+ 
+ 	instance->my_high_delivered = SEQNO_START_MSG;
+ 
++	instance->orf_token_discard = 0;
++
+ 	instance->commit_token = (struct memb_commit_token *)instance->commit_token_storage;
+ }
+ 
+@@ -1556,6 +1561,7 @@
+ 			log_printf (instance->totemsrp_log_level_debug,
+ 				"The token was lost in the RECOVERY state.\n");
+ 			memb_recovery_state_token_loss (instance);
++			instance->orf_token_discard = 1;
+ 			break;
+ 	}
+ }
+@@ -1806,6 +1812,8 @@
+ 	struct totemsrp_instance *instance,
+ 	int gather_from)
+ {
++	instance->orf_token_discard = 1;
++
+ 	memb_set_merge (
+ 		&instance->my_id, 1,
+ 		instance->my_proc_list, &instance->my_proc_list_entries);
+@@ -1926,6 +1934,8 @@
+ 	log_printf (instance->totemsrp_log_level_debug,
+ 		"entering RECOVERY state.\n");
+ 
++	instance->orf_token_discard = 0;
++
+ 	instance->my_high_ring_delivered = 0;
+ 
+ 	sq_reinit (&instance->recovery_sort_queue, SEQNO_START_MSG);
+@@ -3349,6 +3359,9 @@
+ 	"Time since last token %0.4f ms\n", ((float)tv_diff) / 1000000.0);
+ #endif
+ 
++	if (instance->orf_token_discard) {
++		return (0);
++	}
+ #ifdef TEST_DROP_ORF_TOKEN_PERCENTAGE
+ 	if (random()%100 < TEST_DROP_ORF_TOKEN_PERCENTAGE) {
+ 		return (0);

@@ -1,0 +1,30 @@
+From ea18c71936edf8cdc647245374f3a7932ac7e686 Mon Sep 17 00:00:00 2001
+From: Jan Friesse <jfriesse@redhat.com>
+Date: Wed, 23 Feb 2011 15:15:49 +0100
+Subject: [PATCH 3/3] objdb: destroy all handles in _clear_object
+
+Patch replaces free for object_instance with handle_destroy to remove
+leaks in handles (and also memory leak).
+
+Signed-off-by: Jan Friesse <jfriesse@redhat.com>
+Reviewed-by: Steven Dake <sdake@redhat.com>
+---
+ exec/objdb.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/exec/objdb.c b/exec/objdb.c
+index 884263b..5553263 100644
+--- a/exec/objdb.c
++++ b/exec/objdb.c
+@@ -714,7 +714,7 @@ static int _clear_object(struct object_instance *instance)
+ 
+ 		list_del(&find_instance->child_list);
+ 		free(find_instance->object_name);
+-		free(find_instance);
++		hdb_handle_destroy (&object_instance_database, find_instance->object_handle);
+ 	}
+ 
+ 	return 0;
+-- 
+1.7.4
+

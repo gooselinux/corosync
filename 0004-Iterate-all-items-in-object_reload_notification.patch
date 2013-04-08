@@ -1,0 +1,27 @@
+From 7f2e1da84d5883176f0f95936b8a4bf21de12a0a Mon Sep 17 00:00:00 2001
+From: Jan Friesse <jfriesse@redhat.com>
+Date: Tue, 22 Feb 2011 12:19:48 +0100
+Subject: [PATCH 2/3] Iterate all items in object_reload_notification
+
+Signed-off-by: Jan Friesse <jfriesse@redhat.com>
+Reviewed-by: Steven Dake <sdake@redhat.com>
+---
+ exec/objdb.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/exec/objdb.c b/exec/objdb.c
+index dc36236..884263b 100644
+--- a/exec/objdb.c
++++ b/exec/objdb.c
+@@ -342,7 +342,7 @@ static void object_reload_notification(int startstop, int flush)
+ 	}
+ 
+ 	for (list = tmplist.next, tmp = list->next;
+-	     list != tmplist.prev; list = tmp, tmp = list->next) {
++		list != &tmplist; list = tmp, tmp = list->next) {
+ 
+ 		tracker_pt = list_entry (list, struct object_tracker, object_list);
+ 
+-- 
+1.7.4
+

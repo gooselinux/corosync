@@ -1,0 +1,64 @@
+From 0fcf760977a73ef78bacff47e61c30ba21929faa Mon Sep 17 00:00:00 2001
+From: Steven Dake <sdake@redhat.com>
+Date: Thu, 24 Mar 2011 08:53:40 -0700
+Subject: [PATCH 5/6] totemsrp: free messages originated in recovery rather then rely on messages_free
+
+Relying on messages_free may seem like it should work, but it leads to a
+situation where every node has released the messages, yet some nodes think
+messages are missing.  The output then looks like "Retransmit: #" in
+repitition.  This patch frees those messages immediately during the transition
+to the OPERATIONAL state and sets the internal variables totemsrp depends
+upon to the proper values.
+
+Signed-off-by: Steven Dake <sdake@redhat.com>
+Reviewed-by: Jan Friesse <jfriesse@redhat.com>
+---
+ exec/totemsrp.c |   18 ++++++++++++++++--
+ 1 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/exec/totemsrp.c b/exec/totemsrp.c
+index 3802b97..e346889 100644
+--- a/exec/totemsrp.c
++++ b/exec/totemsrp.c
+@@ -1699,6 +1699,8 @@ static void memb_state_operational_enter (struct totemsrp_instance *instance)
+ 	unsigned int trans_memb_list_totemip[PROCESSOR_COUNT_MAX];
+ 	unsigned int new_memb_list_totemip[PROCESSOR_COUNT_MAX];
+ 	unsigned int left_list[PROCESSOR_COUNT_MAX];
++	unsigned int i;
++	unsigned int res;
+ 
+ 	memb_consensus_reset (instance);
+ 
+@@ -1773,7 +1775,6 @@ static void memb_state_operational_enter (struct totemsrp_instance *instance)
+ 	 */
+ 	sq_copy (&instance->regular_sort_queue, &instance->recovery_sort_queue);
+ 	instance->my_last_aru = SEQNO_START_MSG;
+-	sq_items_release (&instance->regular_sort_queue, SEQNO_START_MSG - 1);
+ 
+ 	/* When making my_proc_list smaller, ensure that the
+ 	 * now non-used entries are zero-ed out. There are some suspect
+@@ -1790,7 +1791,20 @@ static void memb_state_operational_enter (struct totemsrp_instance *instance)
+ 
+ 	instance->my_failed_list_entries = 0;
+ 	instance->my_high_delivered = instance->my_aru;
+-// TODO the recovery messages are leaked
++
++	for (i = 0; i <= instance->my_high_delivered; i++) {
++		void *ptr;
++
++		res = sq_item_get (&instance->regular_sort_queue, i, &ptr);
++		if (res == 0) {
++			struct sort_queue_item *regular_message;
++
++			regular_message = ptr;
++			free (regular_message->mcast);
++		}
++	}
++	sq_items_release (&instance->regular_sort_queue, instance->my_high_delivered);
++	instance->last_released = instance->my_high_delivered;
+ 
+ 	log_printf (instance->totemsrp_log_level_debug,
+ 		"entering OPERATIONAL state.\n");
+-- 
+1.7.4
+

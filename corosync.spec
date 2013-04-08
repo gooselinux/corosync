@@ -3,7 +3,7 @@
 Name: corosync
 Summary: The Corosync Cluster Engine and Application Programming Interfaces
 Version: 1.2.3
-Release: 21%{?dist}.1
+Release: 21%{?dist}.2
 License: BSD
 Group: System Environment/Base
 URL: http://ftp.corosync.org
@@ -58,6 +58,15 @@ Patch45: revision-3023.patch
 Patch46: revision-3040.patch
 # Future patches are from the git tree
 Patch47: 0001-Handle-delayed-multicast-packets-that-occur-with-swi.patch
+Patch48: 0002-CPG-make-sure-coroipcc_service_disconnect-is-always-.patch
+Patch49: 0003-Don-t-assert-when-ring-id-file-is-less-then-8-bytes.patch
+Patch50: 0004-Iterate-all-items-in-object_reload_notification.patch
+Patch51: 0005-objdb-destroy-all-handles-in-_clear_object.patch
+Patch52: 0006-Fix-abort-when-token-is-lost-in-RECOVERY-state.patch
+Patch53: 0007-totemsrp-Only-restore-old-ring-id-information-one-ti.patch
+Patch54: 0008-totemsrp-free-messages-originated-in-recovery-rather.patch
+Patch55: 0009-Resolve-abort-during-simulatenous-stopping-of-atleas.patch
+Patch56: 0010-totemsrp-Remove-recv_flush-code-backport.patch
 
 ExclusiveArch: i686 x86_64
 
@@ -126,6 +135,15 @@ BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 %patch45
 %patch46
 %patch47 -p1
+%patch48 -p1
+%patch49 -p1
+%patch50 -p1
+%patch51 -p1
+%patch52 -p1
+%patch53 -p1
+%patch54 -p1
+%patch55 -p1
+%patch56 -p1
 
 %build
 ./autogen.sh
@@ -315,6 +333,39 @@ The Corosync Cluster Engine APIs.
 %{_mandir}/man8/sam_overview.8*
 
 %changelog
+* Fri Apr 15 2011 Jan Friesse <jfriesse@edhat.com> 1.2.3-21.2
+- Resolves: rhbz#696735
+- Resolves: rhbz#696734
+- Resolves: rhbz#681258
+- Resolves: rhbz#696733
+- Resolves: rhbz#696732
+
+- Remove shared memory leak in clients if corosync faults (rhbz#665165)
+- merge upstream commit b57573b037aa2737aed2ba706bf55a4599884641 (rhbz#665165)
+- Avoid abort if existing ring id file does not contain
+  atleast 8 bytes.  (rhbz#696734)
+- merge upstream commit bb35b86fef4f256a21993f73b71fd512d4763e2f (rhbz#696734)
+- Fix problem where objdb handle destroy is not called in
+  clear_object.  (rhbz#681258)
+- merge upstream commit ea18c71936edf8cdc647245374f3a7932ac7e686 (rhbz#681258)
+- Fix problem where all items are not iterated in
+  object_reload_notification.  (rhbz#681258)
+- merge upstream commit 7f2e1da84d5883176f0f95936b8a4bf21de12a0a (rhbz#681258)
+- Only restore old ring id information once before operational
+  state.  (rhbz#696733)
+- merge upstream commit 0eabeee63eca7a4cc1d907607057ac668fafbcae (rhbz#696733)
+- Free recovery messages during operational enter rather then
+  via message_free() call.  (rhbz#696733)
+- merge upstream commit 0fcf760977a73ef78bacff47e61c30ba21929faa (rhbz#696733)
+- Fix problem that leads to abort when token lost in
+  recovery sate. (rhbz#696733)
+- merge upstream commit 6aa47fde953bf2179f5bd2dd07815fc7d80f47bb (rhbz#696733)
+- Remove recv_flush operations from totemsrp to remove recursion
+  error.  (rhbz#696732)
+- backport of upstream commit 336741ee96caf3ae435b609ee8a76788902c9edf (rhbz#696732)
+- Remove assertion during corosync shutdown.  (rhbz#696732)
+- merge upstream commit 92a3a1aa9d07e769eb6bc59467454e0316549cf6 (rhbz#696732)
+
 * Tue Jan 11 2011 Steven Dake <sdake@edhat.com> 1.2.3-21.1
 - Resolves: rhbz#638592
 - merge upstream commit bab4945b57c150301c034085f3ce7b4187b6c864

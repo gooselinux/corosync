@@ -1,0 +1,49 @@
+From b57573b037aa2737aed2ba706bf55a4599884641 Mon Sep 17 00:00:00 2001
+From: Angus Salkeld <asalkeld@redhat.com>
+Date: Thu, 23 Dec 2010 10:30:11 +1100
+Subject: [PATCH] CPG: make sure coroipcc_service_disconnect() is always called.
+
+This prevents a shared mem leak if corosync dies while clients
+are connected.
+
+Calling cpg_finalize() did not release the shared mem as
+coroipcc_msg_send_reply_receive() returned an error and
+thus coroipcc_service_disconnect() did not get called.
+
+Signed-off-by: Angus Salkeld <asalkeld@redhat.com>
+Reviewed-by: Steven Dake <sdake@redhat.com>
+---
+ lib/cpg.c |   11 +----------
+ 1 files changed, 1 insertions(+), 10 deletions(-)
+
+diff --git a/lib/cpg.c b/lib/cpg.c
+index 11bae38..f61efde 100644
+--- a/lib/cpg.c
++++ b/lib/cpg.c
+@@ -239,22 +239,13 @@ cs_error_t cpg_finalize (
+ 		&iov,
+ 		1,
+ 		&res_lib_cpg_finalize,
+-		sizeof (struct req_lib_cpg_finalize));
+-
+-	if (error != CS_OK) {
+-		goto error_put;
+-	}
++		sizeof (struct res_lib_cpg_finalize));
+ 
+ 	coroipcc_service_disconnect (cpg_inst->handle);
+ 
+ 	cpg_inst_finalize (cpg_inst, handle);
+ 	hdb_handle_put (&cpg_handle_t_db, handle);
+ 
+-	return (CPG_OK);
+-
+-error_put:
+-	hdb_handle_put (&cpg_iteration_handle_t_db, handle);
+-	cpg_inst->finalize = 0;
+ 	return (error);
+ }
+ 
+-- 
+1.7.2.3
+
